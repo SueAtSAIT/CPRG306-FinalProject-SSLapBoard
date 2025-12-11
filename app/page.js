@@ -20,6 +20,7 @@ export default function Home() {
               go fullscreen with
               <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="21" />
             </li>
+            <li>on iPad, swipe down to exit fullscreen, or use X</li>
             <li>select skater by armband colour*</li>
 
             <li>colour scheme can be updated in settings*</li>
@@ -47,7 +48,7 @@ export default function Home() {
             Launch
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
+            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/8 px-5 transition-colors hover:border-transparent hover:bg-black4 dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
             href="#"
             target="_blank"
             rel="noopener noreferrer">

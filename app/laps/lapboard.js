@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Icon } from "@iconify-icon/react";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
 
+// TODO: add color settings
+// TODO: add dark mode effect
+
 export default function Lapboard() {
   // const [skater, setSkater] = useState[("White", "Red", "Yellow", "Blue")];
   const initialValue = 5;
@@ -14,20 +17,20 @@ export default function Lapboard() {
 
   const incrementSeconds = () => {
     console.log("seconds + clicked");
-    setSeconds((prev) => prev + 1);
+    setSeconds((prev) => (prev + 1) % 10);
   };
   const decrementSeconds = () => {
     console.log("seconds - clicked");
-    setSeconds((prev) => prev - 1);
+    setSeconds((prev) => (prev - 1 + 10) % 10);
   };
 
   const incrementTenths = () => {
     console.log("tenths + clicked");
-    setTenths((prev) => prev + 1);
+    setTenths((prev) => (prev + 1) % 10);
   };
   const decrementTenths = () => {
     console.log("tenths - clicked");
-    setTenths((prev) => prev - 1);
+    setTenths((prev) => (prev - 1 + 10) % 10);
   };
 
   return (

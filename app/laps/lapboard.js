@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { Icon } from "@iconify-icon/react";
 
 export default function Lapboard() {
   // const [skater, setSkater] = useState[("White", "Red", "Yellow", "Blue")];
@@ -32,12 +32,7 @@ export default function Lapboard() {
       <div className="flex-1 flex items-center justify-center gap-8 px-16">
         <div className="flex-1 flex flex-col items-center gap-4">
           <button type="button" onClick={incrementSeconds}>
-            <Image
-              src="/icons/simple-line-icons--plus.png"
-              alt="Increase"
-              width={32}
-              height={32}
-            />
+            <Icon icon="simple-line-icons:plus" height="36" />
           </button>
           <p
             className="text-[40rem] leading-none tracking-tighter pointer-events-none"
@@ -45,22 +40,12 @@ export default function Lapboard() {
             {seconds}
           </p>
           <button type="button" onClick={decrementSeconds}>
-            <Image
-              src="/icons/simple-line-icons--minus.png"
-              alt="Reduce"
-              width={32}
-              height={32}
-            />
+            <Icon icon="simple-line-icons:minus" height="36" />
           </button>
         </div>
         <div className="flex-1 flex flex-col items-center gap-4">
           <button type="button" onClick={incrementTenths}>
-            <Image
-              src="/icons/simple-line-icons--plus.png"
-              alt="Increase"
-              width={32}
-              height={32}
-            />
+            <Icon icon="simple-line-icons:plus" height="36" />
           </button>
 
           <p
@@ -69,12 +54,7 @@ export default function Lapboard() {
             {tenths}
           </p>
           <button type="button" onClick={decrementTenths}>
-            <Image
-              src="/icons/simple-line-icons--minus.png"
-              alt="Reduce"
-              width={32}
-              height={32}
-            />
+            <Icon icon="simple-line-icons:minus" height="36" />
           </button>
         </div>
       </div>

@@ -48,7 +48,7 @@ export default function Lapboard() {
                 <Icon icon="simple-line-icons:plus" height="36" />
               </button>
               <p
-                className="text-[40rem] leading-none tracking-tighter pointer-events-none"
+                className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
                 style={{ fontWeight: 900 }}>
                 {seconds}
               </p>
@@ -62,7 +62,7 @@ export default function Lapboard() {
               </button>
 
               <p
-                className="text-[40rem] leading-none tracking-tighter pointer-events-none"
+                className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
                 style={{ fontWeight: 900 }}>
                 {tenths}
               </p>

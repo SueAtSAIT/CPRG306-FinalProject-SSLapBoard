@@ -49,7 +49,11 @@ export default function Lapboard() {
               </button>
               <p
                 className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
-                style={{ fontWeight: 900 }}>
+                style={{
+                  fontWeight: 900,
+                  color: "black",
+                  WebkitTextStroke: "0.5px black",
+                }}>
                 {seconds}
               </p>
               <button type="button" onClick={decrementSeconds}>
@@ -63,7 +67,11 @@ export default function Lapboard() {
 
               <p
                 className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
-                style={{ fontWeight: 900 }}>
+                style={{
+                  fontWeight: 900,
+                  color: "black",
+                  WebkitTextStroke: "0.5px black",
+                }}>
                 {tenths}
               </p>
               <button type="button" onClick={decrementTenths}>

@@ -37,7 +37,12 @@ export default function Lapboard() {
     <>
       <div>
         <button type="button" onClick={handle.enter}>
-          <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="36" />
+          <Icon
+            icon="humbleicons:expand"
+            alt="Go Fullscreen"
+            height="36"
+            style={{ color: "black" }}
+          />
         </button>
       </div>
       <FullScreen handle={handle}>
@@ -45,7 +50,11 @@ export default function Lapboard() {
           <div className="flex-1 flex items-center justify-center gap-2 px-6">
             <div className="flex-1 flex flex-col items-center gap-2">
               <button type="button" onClick={incrementSeconds}>
-                <Icon icon="simple-line-icons:plus" height="36" />
+                <Icon
+                  icon="simple-line-icons:plus"
+                  height="36"
+                  style={{ color: "black" }}
+                />
               </button>
               <p
                 className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
@@ -57,12 +66,20 @@ export default function Lapboard() {
                 {seconds}
               </p>
               <button type="button" onClick={decrementSeconds}>
-                <Icon icon="simple-line-icons:minus" height="36" />
+                <Icon
+                  icon="simple-line-icons:minus"
+                  height="36"
+                  style={{ color: "black" }}
+                />
               </button>
             </div>
             <div className="flex-1 flex flex-col items-center gap-2">
               <button type="button" onClick={incrementTenths}>
-                <Icon icon="simple-line-icons:plus" height="36" />
+                <Icon
+                  icon="simple-line-icons:plus"
+                  height="36"
+                  style={{ color: "black" }}
+                />
               </button>
 
               <p
@@ -75,7 +92,11 @@ export default function Lapboard() {
                 {tenths}
               </p>
               <button type="button" onClick={decrementTenths}>
-                <Icon icon="simple-line-icons:minus" height="36" />
+                <Icon
+                  icon="simple-line-icons:minus"
+                  height="36"
+                  style={{ color: "black" }}
+                />
               </button>
             </div>
           </div>

@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { Icon } from "@iconify-icon/react";
+import { FullScreen, useFullScreenHandle } from "react-full-screen";
 
 export default function Lapboard() {
   // const [skater, setSkater] = useState[("White", "Red", "Yellow", "Blue")];
   const initialValue = 5;
   const [seconds, setSeconds] = useState(initialValue);
   const [tenths, setTenths] = useState(initialValue);
+  // const lightmode = "fontWeight: 900";
+  const handle = useFullScreenHandle();
 
   const incrementSeconds = () => {
     console.log("seconds + clicked");
@@ -28,36 +31,45 @@ export default function Lapboard() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <div className="flex-1 flex items-center justify-center gap-8 px-16">
-        <div className="flex-1 flex flex-col items-center gap-4">
-          <button type="button" onClick={incrementSeconds}>
-            <Icon icon="simple-line-icons:plus" height="36" />
-          </button>
-          <p
-            className="text-[40rem] leading-none tracking-tighter pointer-events-none"
-            style={{ fontWeight: 900 }}>
-            {seconds}
-          </p>
-          <button type="button" onClick={decrementSeconds}>
-            <Icon icon="simple-line-icons:minus" height="36" />
-          </button>
-        </div>
-        <div className="flex-1 flex flex-col items-center gap-4">
-          <button type="button" onClick={incrementTenths}>
-            <Icon icon="simple-line-icons:plus" height="36" />
-          </button>
-
-          <p
-            className="text-[40rem] leading-none tracking-tighter pointer-events-none"
-            style={{ fontWeight: 900 }}>
-            {tenths}
-          </p>
-          <button type="button" onClick={decrementTenths}>
-            <Icon icon="simple-line-icons:minus" height="36" />
-          </button>
-        </div>
+    <>
+      <div>
+        <button type="button" onClick={handle.enter}>
+          <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="36" />
+        </button>
       </div>
-    </div>
+      <FullScreen handle={handle}>
+        <div className="w-full h-full flex flex-col">
+          <div className="flex-1 flex items-center justify-center gap-2 px-6">
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <button type="button" onClick={incrementSeconds}>
+                <Icon icon="simple-line-icons:plus" height="36" />
+              </button>
+              <p
+                className="text-[40rem] leading-none tracking-tighter pointer-events-none"
+                style={{ fontWeight: 900 }}>
+                {seconds}
+              </p>
+              <button type="button" onClick={decrementSeconds}>
+                <Icon icon="simple-line-icons:minus" height="36" />
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <button type="button" onClick={incrementTenths}>
+                <Icon icon="simple-line-icons:plus" height="36" />
+              </button>
+
+              <p
+                className="text-[40rem] leading-none tracking-tighter pointer-events-none"
+                style={{ fontWeight: 900 }}>
+                {tenths}
+              </p>
+              <button type="button" onClick={decrementTenths}>
+                <Icon icon="simple-line-icons:minus" height="36" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </FullScreen>
+    </>
   );
 }

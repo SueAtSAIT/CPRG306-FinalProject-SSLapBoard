@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { Icon } from "@iconify-icon/react";
 
 export default function Home() {
   return (
@@ -13,15 +16,20 @@ export default function Home() {
           </p>
           <ul className="list-disc">
             <li>use on iPad in Landscape orientation.</li>
-            <li>select skater by armband colour</li>
+            <li>
+              go fullscreen with
+              <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="21" />
+            </li>
+            <li>select skater by armband colour*</li>
 
-            <li>colour scheme can be updated in settings</li>
+            <li>colour scheme can be updated in settings*</li>
             <li>
               click Launch to automatically connect to Calgary Olympic Oval
-              timing system
+              timing system*
             </li>
-            <li>connection status indicator blinking - go to Manual Mode</li>
+            <li>connection status indicator blinking - go to Manual Mode*</li>
           </ul>
+          <p>* feature not yet implemented</p>
         </div>
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
@@ -40,7 +48,7 @@ export default function Home() {
           </a>
           <a
             className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="#"
             target="_blank"
             rel="noopener noreferrer">
             Documentation

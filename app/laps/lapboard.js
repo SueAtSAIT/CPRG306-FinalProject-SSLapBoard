@@ -73,6 +73,7 @@ export default function Lapboard({
               />
             </button>
             {/* skater selector icons when active and inactive (no feed received): */}
+            {/* TODO: add skater selection to buttons with an indicator to show which is selected and times being displayed */}
             <button>
               {liveFeedActive ? (
                 <Icon icon="openmoji:white-circle" height="40" />

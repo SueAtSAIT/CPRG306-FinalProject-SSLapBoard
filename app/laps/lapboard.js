@@ -126,11 +126,7 @@ export default function Lapboard({
                     ? "hover:bg-gray-800 text-gray-300"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}>
-                <Icon
-                  icon="simple-line-icons:plus"
-                  height="36"
-                  style={{ color: "black" }}
-                />
+                <Icon icon="simple-line-icons:plus" height="36" />
               </button>
               <p
                 className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
@@ -141,21 +137,27 @@ export default function Lapboard({
                 }}>
                 {seconds}
               </p>
-              <button type="button" onClick={decrementSeconds}>
-                <Icon
-                  icon="simple-line-icons:minus"
-                  height="36"
-                  style={{ color: "black" }}
-                />
+              <button
+                type="button"
+                onClick={decrementSeconds}
+                className={`p-3 rounded-lg transition-colors ${
+                  darkMode
+                    ? "hover:bg-gray-800 text-gray-300"
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}>
+                <Icon icon="simple-line-icons:minus" height="36" />
               </button>
             </div>
             <div className="flex-1 flex flex-col items-center gap-2">
-              <button type="button" onClick={incrementTenths}>
-                <Icon
-                  icon="simple-line-icons:plus"
-                  height="36"
-                  style={{ color: "black" }}
-                />
+              <button
+                type="button"
+                onClick={incrementTenths}
+                className={`p-3 rounded-lg transition-colors ${
+                  darkMode
+                    ? "hover:bg-gray-800 text-gray-300"
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}>
+                <Icon icon="simple-line-icons:plus" height="36" />
               </button>
 
               <p
@@ -167,12 +169,15 @@ export default function Lapboard({
                 }}>
                 {tenths}
               </p>
-              <button type="button" onClick={decrementTenths}>
-                <Icon
-                  icon="simple-line-icons:minus"
-                  height="36"
-                  style={{ color: "black" }}
-                />
+              <button
+                type="button"
+                onClick={decrementTenths}
+                className={`p-3 rounded-lg transition-colors ${
+                  darkMode
+                    ? "hover:bg-gray-800 text-gray-300"
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}>
+                <Icon icon="simple-line-icons:minus" height="36" />
               </button>
             </div>
           </div>

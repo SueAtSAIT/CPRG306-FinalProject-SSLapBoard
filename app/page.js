@@ -17,18 +17,26 @@ export default function Home() {
           <ul className="list-disc">
             <li>use on iPad in Landscape orientation.</li>
             <li>
-              go fullscreen with
-              <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="21" />
+              go fullscreen with{" "}
+              <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="15" />
             </li>
-            <li>on iPad, swipe down to exit fullscreen, or use X</li>
-            <li>select skater by armband colour*</li>
-
-            <li>colour scheme can be updated in settings*</li>
+            <li>
+              on iPad, swipe down to exit fullscreen, or use X, or{" "}
+              <Icon icon="ant-design:fullscreen-exit-outlined" height="15" />
+            </li>
+            <li>select skater by active armband colour*</li>
+            <li>
+              if no active skaters indicated by colours - go to Manual Mode{" "}
+              <Icon icon="la:hand-pointer" height="15" />
+            </li>
+            <li>
+              colour scheme can be updated in settings{" "}
+              <Icon icon="humbleicons:cog" alt="Settings" height="15" />
+            </li>
             <li>
               click Launch to automatically connect to Calgary Olympic Oval
               timing system*
             </li>
-            <li>connection status indicator blinking - go to Manual Mode*</li>
           </ul>
           <p>* feature not yet implemented</p>
         </div>

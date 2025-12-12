@@ -12,6 +12,7 @@ export default function Page() {
   const [secondsColour, setSecondsColour] = useState("#000000");
   const [tenthsColour, setTenthsColour] = useState("#EF4444");
   const [showSettings, setShowSettings] = useState(false);
+  const [liveFeedActive, setLiveFeedActive] = useState(false);
 
   useEffect(() => {
     if (!manualMode) {
@@ -52,6 +53,7 @@ export default function Page() {
           // onIndicatorSelect={setSelectedIndicator}
           onManualModeToggle={setManualMode}
           onSettingsClick={() => setShowSettings(true)}
+          liveFeedActive={liveFeedActive}
         />
       )}
 

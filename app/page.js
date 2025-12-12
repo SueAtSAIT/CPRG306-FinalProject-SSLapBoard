@@ -24,10 +24,23 @@ export default function Home() {
               on iPad, swipe down to exit fullscreen, or use X, or{" "}
               <Icon icon="ant-design:fullscreen-exit-outlined" height="15" />
             </li>
-            <li>select skater by active armband colour*</li>
             <li>
-              if no active skaters indicated by colours - go to Manual Mode{" "}
-              <Icon icon="la:hand-pointer" height="15" />
+              select skater by active (live timing system) armband colour*{" "}
+              <Icon
+                icon="clarity:circle-solid"
+                height="15"
+                style={{ color: "#ff0000" }}
+              />{" "}
+            </li>
+            <li>
+              if no active skaters indicated{" "}
+              <Icon
+                icon="clarity:ban-line"
+                height="15"
+                style={{ color: "#ff0000" }}
+              />{" "}
+              use Manual Mode <Icon icon="simple-line-icons:plus" height="15" />{" "}
+              <Icon icon="simple-line-icons:minus" height="15" />
             </li>
             <li>
               colour scheme can be updated in settings{" "}

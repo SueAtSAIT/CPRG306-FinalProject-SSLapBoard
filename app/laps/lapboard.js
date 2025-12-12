@@ -18,6 +18,7 @@ export default function Lapboard({
   darkMode,
   onManualModeToggle,
   onSettingsClick,
+  liveFeedActive,
 }) {
   const initialValue = 5;
   const [seconds, setSeconds] = useState(initialValue);
@@ -41,25 +42,6 @@ export default function Lapboard({
     console.log("tenths - clicked");
     setTenths((prev) => (prev - 1 + 10) % 10);
   };
-
-  // skater selector icons when active and inactive (no feed received):
-  // <Icon icon="openmoji:white-circle" />
-  // <span
-  //   class="icon-[tabler--circle-off]"
-  //   style="width: 25px; height: 25px; color: #000;"></span>;
-  // <span
-  //   class="icon-[tabler--circle-off]"
-  //   style="width: 25px; height: 25px; color: #fff;"></span>;
-  // <Icon icon="openmoji:red-circle" />
-  // <span class="icon-[tabler--circle-off]" style="width: 25px; height: 25px; color: #ff0000;"></span>
-  // <Icon icon="openmoji:yellow-circle" />
-  // <span
-  //   class="icon-[tabler--circle-off]"
-  //   style="width: 25px; height: 25px; color: #f4e641;"></span>;
-  // <Icon icon="openmoji:blue-circle" fill="#1037df" />;
-  // <span
-  //   class="icon-[tabler--circle-off]"
-  //   style="width: 25px; height: 25px; color: #1037df;"></span>;
 
   return (
     <>
@@ -90,7 +72,66 @@ export default function Lapboard({
                 height="36"
               />
             </button>
-            <button
+            {/* skater selector icons when active and inactive (no feed received): */}
+            <button>
+              {liveFeedActive ? (
+                <Icon icon="openmoji:white-circle" height="40" />
+              ) : (
+                <Icon
+                  icon="clarity:ban-line"
+                  height="40"
+                  style={{ color: darkMode ? "#ffffff" : "#000000" }}
+                />
+              )}
+            </button>
+
+            <button>
+              {liveFeedActive ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#ff0000" }}
+                />
+              ) : (
+                <Icon
+                  icon="clarity:ban-line"
+                  height="40"
+                  style={{ color: "#ff0000" }}
+                />
+              )}
+            </button>
+            <button>
+              {liveFeedActive ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#f4e641" }}
+                />
+              ) : (
+                <Icon
+                  icon="clarity:ban-line"
+                  height="40"
+                  style={{ color: "#f4e641" }}
+                />
+              )}
+            </button>
+            <button>
+              {liveFeedActive ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#1037df" }}
+                />
+              ) : (
+                <Icon
+                  icon="clarity:ban-line"
+                  height="40"
+                  style={{ color: "#1037df" }}
+                />
+              )}
+            </button>
+            {/* TODO: remove manual mode if auto-detect skater feed can render the correct skater colours and disable the plus/minus buttons */}
+            {/* <button
               onClick={() => onManualModeToggle(!manualMode)}
               className={`p-3 rounded-lg transition-colors ${
                 manualMode
@@ -102,7 +143,7 @@ export default function Lapboard({
               aria-label="Toggle manual mode"
               title={manualMode ? "Manual Mode ON" : "Live Feed Mode"}>
               <Icon icon="la:hand-pointer" height="36" />
-            </button>
+            </button> */}
           </div>
           <div className="absolute bottom-8 left-8 flex flex-col gap-3 z-10">
             <button
@@ -121,8 +162,11 @@ export default function Lapboard({
               <button
                 type="button"
                 onClick={incrementSeconds}
+                disabled={liveFeedActive}
                 className={`p-3 rounded-lg transition-colors ${
-                  darkMode
+                  liveFeedActive
+                    ? "opacity-30 cursor-not-allowed"
+                    : darkMode
                     ? "hover:bg-gray-800 text-gray-300"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}>
@@ -140,8 +184,11 @@ export default function Lapboard({
               <button
                 type="button"
                 onClick={decrementSeconds}
+                disabled={liveFeedActive}
                 className={`p-3 rounded-lg transition-colors ${
-                  darkMode
+                  liveFeedActive
+                    ? "opacity-30 cursor-not-allowed"
+                    : darkMode
                     ? "hover:bg-gray-800 text-gray-300"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}>
@@ -152,8 +199,11 @@ export default function Lapboard({
               <button
                 type="button"
                 onClick={incrementTenths}
+                disabled={liveFeedActive}
                 className={`p-3 rounded-lg transition-colors ${
-                  darkMode
+                  liveFeedActive
+                    ? "opacity-30 cursor-not-allowed"
+                    : darkMode
                     ? "hover:bg-gray-800 text-gray-300"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}>
@@ -172,8 +222,11 @@ export default function Lapboard({
               <button
                 type="button"
                 onClick={decrementTenths}
+                disabled={liveFeedActive}
                 className={`p-3 rounded-lg transition-colors ${
-                  darkMode
+                  liveFeedActive
+                    ? "opacity-30 cursor-not-allowed"
+                    : darkMode
                     ? "hover:bg-gray-800 text-gray-300"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}>

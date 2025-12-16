@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify-icon/react";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
+import { startLapFeedAuto, parseLapDigits } from "./connection";
 
 // TODO: add color settings for numbers
 // TODO: add dark mode effect / intentionally set foreground & background now that explicit font colour set
@@ -23,6 +24,10 @@ export default function Lapboard({
   const initialValue = 5;
   const [seconds, setSeconds] = useState(initialValue);
   const [tenths, setTenths] = useState(initialValue);
+  const [activeColours, setActiveColours] = useState({}); // { White: true, Red: true, ... }
+  const [selectedColour, setSelectedColour] = useState(null); // one of White, Red, Yellow, Blue
+  const [liveActive, setLiveActive] = useState(false);
+  const [lastLapByColour, setLastLapByColour] = useState({}); // { White: {LapTime, ...}, ... }
   const handle = useFullScreenHandle();
 
   const incrementSeconds = () => {
@@ -42,6 +47,55 @@ export default function Lapboard({
     console.log("tenths - clicked");
     setTenths((prev) => (prev - 1 + 10) % 10);
   };
+
+  // Establish SignalR feed
+  useEffect(() => {
+    let dispose = null;
+    startLapFeedAuto((laps) => {
+      // Filter Lap events
+      const lapEvents = laps.filter((e) => e?.EventType === "Lap");
+      const active = {};
+      const lastLap = {};
+      lapEvents.forEach((e) => {
+        const colour = e.GroupId || e.GroupID;
+        if (!colour) return;
+        active[colour] = true;
+        lastLap[colour] = e;
+      });
+      setActiveColours(active);
+      setLastLapByColour((prev) => ({ ...prev, ...lastLap }));
+      setLiveActive(lapEvents.length > 0);
+
+      // If no selection yet, pick the first active colour
+      if (!selectedColour) {
+        const first = Object.keys(active)[0];
+        if (first) setSelectedColour(first);
+      }
+
+      // Update displayed digits from selected colour
+      const selectedLap = selectedColour ? lastLap[selectedColour] : null;
+      if (selectedLap?.LapTime != null) {
+        const { secondsDigit, tenthsDigit } = parseLapDigits(
+          selectedLap.LapTime
+        );
+        if (Number.isFinite(secondsDigit)) setSeconds(secondsDigit);
+        if (Number.isFinite(tenthsDigit)) setTenths(tenthsDigit);
+      }
+    }, undefined)
+      .then((cleanup) => {
+        dispose = cleanup;
+      })
+      .catch((e) => {
+        console.warn(
+          "Live feed unavailable; staying in manual mode",
+          e?.message
+        );
+      });
+
+    return () => {
+      if (dispose) dispose();
+    };
+  }, [selectedColour]);
 
   return (
     <>
@@ -74,9 +128,22 @@ export default function Lapboard({
             </button>
             {/* skater selector icons when active and inactive (no feed received): */}
             {/* TODO: add skater selection to buttons with an indicator to show which is selected and times being displayed */}
-            <button>
-              {liveFeedActive ? (
-                <Icon icon="openmoji:white-circle" height="40" />
+            <button
+              onClick={() => setSelectedColour("White")}
+              className={`${
+                selectedColour === "White" ? "ring-2 ring-white/70" : ""
+              }`}
+              aria-label="Select White">
+              {liveFeedActive ?? liveActive ? (
+                activeColours["White"] ? (
+                  <Icon icon="openmoji:white-circle" height="40" />
+                ) : (
+                  <Icon
+                    icon="clarity:ban-line"
+                    height="40"
+                    style={{ color: darkMode ? "#ffffff" : "#000000" }}
+                  />
+                )
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -86,13 +153,26 @@ export default function Lapboard({
               )}
             </button>
 
-            <button>
-              {liveFeedActive ? (
-                <Icon
-                  icon="clarity:circle-solid"
-                  height="40"
-                  style={{ color: "#ff0000" }}
-                />
+            <button
+              onClick={() => setSelectedColour("Red")}
+              className={`${
+                selectedColour === "Red" ? "ring-2 ring-red-400" : ""
+              }`}
+              aria-label="Select Red">
+              {liveFeedActive ?? liveActive ? (
+                activeColours["Red"] ? (
+                  <Icon
+                    icon="clarity:circle-solid"
+                    height="40"
+                    style={{ color: "#ff0000" }}
+                  />
+                ) : (
+                  <Icon
+                    icon="clarity:ban-line"
+                    height="40"
+                    style={{ color: "#ff0000" }}
+                  />
+                )
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -101,13 +181,26 @@ export default function Lapboard({
                 />
               )}
             </button>
-            <button>
-              {liveFeedActive ? (
-                <Icon
-                  icon="clarity:circle-solid"
-                  height="40"
-                  style={{ color: "#f4e641" }}
-                />
+            <button
+              onClick={() => setSelectedColour("Yellow")}
+              className={`${
+                selectedColour === "Yellow" ? "ring-2 ring-yellow-300" : ""
+              }`}
+              aria-label="Select Yellow">
+              {liveFeedActive ?? liveActive ? (
+                activeColours["Yellow"] ? (
+                  <Icon
+                    icon="clarity:circle-solid"
+                    height="40"
+                    style={{ color: "#f4e641" }}
+                  />
+                ) : (
+                  <Icon
+                    icon="clarity:ban-line"
+                    height="40"
+                    style={{ color: "#f4e641" }}
+                  />
+                )
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -116,13 +209,26 @@ export default function Lapboard({
                 />
               )}
             </button>
-            <button>
-              {liveFeedActive ? (
-                <Icon
-                  icon="clarity:circle-solid"
-                  height="40"
-                  style={{ color: "#1037df" }}
-                />
+            <button
+              onClick={() => setSelectedColour("Blue")}
+              className={`${
+                selectedColour === "Blue" ? "ring-2 ring-blue-400" : ""
+              }`}
+              aria-label="Select Blue">
+              {liveFeedActive ?? liveActive ? (
+                activeColours["Blue"] ? (
+                  <Icon
+                    icon="clarity:circle-solid"
+                    height="40"
+                    style={{ color: "#1037df" }}
+                  />
+                ) : (
+                  <Icon
+                    icon="clarity:ban-line"
+                    height="40"
+                    style={{ color: "#1037df" }}
+                  />
+                )
               ) : (
                 <Icon
                   icon="clarity:ban-line"

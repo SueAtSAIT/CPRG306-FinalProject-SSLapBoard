@@ -20,10 +20,10 @@ export default function Home() {
               go fullscreen with{" "}
               <Icon icon="humbleicons:expand" alt="Go Fullscreen" height="15" />
             </li>
-            <li>
+            {/* <li>
               on iPad, swipe down to exit fullscreen, or use X, or{" "}
               <Icon icon="ant-design:fullscreen-exit-outlined" height="15" />
-            </li>
+            </li> */}
             <li>
               select skater by active (live timing system) armband colour{" "}
               <Icon

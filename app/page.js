@@ -25,7 +25,7 @@ export default function Home() {
               <Icon icon="ant-design:fullscreen-exit-outlined" height="15" />
             </li>
             <li>
-              select skater by active (live timing system) armband colour*{" "}
+              select skater by active (live timing system) armband colour{" "}
               <Icon
                 icon="clarity:circle-solid"
                 height="15"
@@ -50,10 +50,9 @@ export default function Home() {
               click <span className="font-bold">Launch</span> to automatically
               connect to the
               <span className="font-extrabold"> Calgary Olympic Oval</span>{" "}
-              timing system*
+              timing system
             </li>
           </ul>
-          <p>* feature not yet implemented</p>
         </div>
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a

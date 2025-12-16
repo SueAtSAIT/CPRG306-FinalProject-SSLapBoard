@@ -125,8 +125,15 @@ function normalizeLegacyUrl(url) {
 async function startLegacyLapFeed(hubUrl, onLapArray) {
   const $ = await ensureLegacyClient();
 
-  const normalizedUrl = normalizeLegacyUrl(hubUrl);
-  const connection = $.hubConnection(normalizedUrl, { useDefaultPath: false });
+  // If running in a secure context (https), route via same-origin proxy to avoid HTTPS upgrade/mixed content issues in browsers like Chrome
+  const shouldProxy =
+    typeof window !== "undefined" &&
+    window.isSecureContext &&
+    /^http:/i.test(hubUrl || DEFAULT_HUB_URL);
+  const baseUrl = shouldProxy
+    ? "/api/signalr-proxy"
+    : normalizeLegacyUrl(hubUrl);
+  const connection = $.hubConnection(baseUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
 
   const onLap = (timingDataArray) => {
@@ -151,8 +158,8 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     }
   } catch (err) {
     // If https fails, retry over http once
-    if (/^https:/i.test(normalizedUrl)) {
-      const httpUrl = normalizedUrl.replace(/^https:/i, "http:");
+    if (/^https:/i.test(baseUrl)) {
+      const httpUrl = baseUrl.replace(/^https:/i, "http:");
       console.warn("Retrying legacy SignalR over http due to SSL error");
       const retryConn = $.hubConnection(httpUrl, { useDefaultPath: false });
       const retryProxy = retryConn.createHubProxy("LiveLTTimingDataHub");

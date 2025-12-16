@@ -150,7 +150,11 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
   proxy.on("SendLiveLapboardData", onLap);
 
   try {
-    await connection.start();
+    // Disable WebSockets when using proxy (Next.js API routes don't support WS upgrades)
+    const startOptions = shouldProxy
+      ? { transport: ["serverSentEvents", "longPolling"] }
+      : {};
+    await connection.start(startOptions);
     try {
       await proxy.invoke("SubscribeLiveLapboardDataForLapboard");
     } catch (e) {

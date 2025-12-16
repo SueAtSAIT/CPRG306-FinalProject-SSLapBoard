@@ -4,8 +4,7 @@ import Lapboard from "./lapboard";
 import Settings from "./settings";
 
 export default function Page() {
-  // TODO: signalR connection
-  // TODO: settings (number colours, dark mode)
+  // TODO: signalR connection using connection.js details from JLittle
 
   const [manualMode, setManualMode] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -21,7 +20,7 @@ export default function Page() {
       // ws.onmessage = (event) => {
       //   const data = JSON.parse(event.data);
       // need to get the group = colour, then the lap time, then parse into seconds and tenths
-      // which don't be data.seconds but just seconds variable... placeholder for now.
+      // which won't be data.seconds but just seconds variable... placeholder for now.
       //   setSeconds(data.seconds);
       //   setTenths(data.tenths);
       // };
@@ -56,8 +55,6 @@ export default function Page() {
           liveFeedActive={liveFeedActive}
         />
       )}
-
-      {/* <Lapboard /> */}
     </div>
   );
 }

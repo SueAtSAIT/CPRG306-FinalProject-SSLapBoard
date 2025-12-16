@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 const DEFAULT_TARGET =
   process.env.SIGNALR_LEGACY_BASE ||
   "http://stcal-comp-web.knes.ucalgary.ca:5264/signalr";
+const LEGACY_HOST = process.env.SIGNALR_LEGACY_HOST || null;
 
 function buildTargetUrl(pathSegments, search) {
   let base = DEFAULT_TARGET.replace(/\/+$/g, "");
@@ -18,8 +19,13 @@ async function proxy(request, ctx) {
   const targetUrl = buildTargetUrl(resolved?.path, url.searchParams.toString());
 
   const outgoingHeaders = new Headers(headers);
-  outgoingHeaders.delete("host");
   outgoingHeaders.delete("origin");
+  // Set Host header if provided (needed when targeting by IP but server expects hostname)
+  if (LEGACY_HOST) {
+    outgoingHeaders.set("host", LEGACY_HOST);
+  } else {
+    outgoingHeaders.delete("host");
+  }
   // Allow cross-origin on the response
 
   const init = {
@@ -52,6 +58,15 @@ async function proxy(request, ctx) {
   }
   const respHeaders = new Headers(resp.headers);
   respHeaders.set("access-control-allow-origin", "*");
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    return new Response(text || JSON.stringify({ status: resp.status }), {
+      status: resp.status,
+      statusText: resp.statusText,
+      headers: respHeaders,
+    });
+  }
 
   // For negotiate responses, rewrite URLs to use our proxy
   const pathStr = Array.isArray(resolved?.path) ? resolved.path.join("/") : "";

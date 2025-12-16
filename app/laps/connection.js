@@ -53,10 +53,12 @@ async function ensureLegacyClient() {
   // jQuery + ASP.NET SignalR 2.4.x client from CDN
   legacyClientPromise = (async () => {
     await loadFirstAvailable([
+      "/vendor/jquery-3.6.0.min.js",
       "https://code.jquery.com/jquery-3.6.0.min.js",
       "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
     ]);
     await loadFirstAvailable([
+      "/vendor/jquery.signalR-2.4.3.min.js",
       "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/2.4.3/jquery.signalR.min.js",
       "https://unpkg.com/microsoft-signalr@2.4.3/jquery.signalR.min.js",
       "https://cdn.jsdelivr.net/npm/microsoft-signalr@2.4.3/jquery.signalR.min.js",

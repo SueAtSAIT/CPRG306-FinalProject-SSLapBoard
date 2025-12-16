@@ -129,6 +129,7 @@ function normalizeLegacyUrl(url) {
 
 async function startLegacyLapFeed(hubUrl, onLapArray) {
   const $ = await ensureLegacyClient();
+  console.log("[SignalR] startLegacyLapFeed started", { hubUrl });
 
   // If running in a secure context (https), route via same-origin proxy to avoid HTTPS upgrade/mixed content issues in browsers like Chrome
   const shouldProxy =
@@ -138,11 +139,19 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
   const baseUrl = shouldProxy
     ? "/api/signalr-proxy"
     : normalizeLegacyUrl(hubUrl);
+  console.log("[SignalR] Hub base URL", { baseUrl, shouldProxy });
   const connection = $.hubConnection(baseUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
+  console.log("[SignalR] Hub proxy created", {
+    hubName: "LiveLTTimingDataHub",
+  });
 
   const onLap = (timingDataArray) => {
     try {
+      console.log("[SignalR] SendLiveLapboardData event received", {
+        count: Array.isArray(timingDataArray) ? timingDataArray.length : 0,
+        data: timingDataArray,
+      });
       const laps = Array.isArray(timingDataArray)
         ? timingDataArray.map(normalizeTimingData)
         : [];
@@ -152,24 +161,41 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     }
   };
 
+  console.log("[SignalR] Registering SendLiveLapboardData handler");
   proxy.on("SendLiveLapboardData", onLap);
+
+  // Also register a catch-all to see what other events are being received
+  connection.client = connection.client || {};
+  connection.client.receiveData = function (method, data) {
+    console.log("[SignalR] Server invoked method (catch-all)", {
+      method,
+      dataKeys: typeof data === "object" ? Object.keys(data) : typeof data,
+    });
+  };
 
   try {
     // Disable WebSockets when using proxy (Next.js API routes don't support WS upgrades)
     const startOptions = shouldProxy
       ? { transport: ["serverSentEvents", "longPolling"] }
       : {};
+    console.log("[SignalR] Starting connection", { startOptions });
     await connection.start(startOptions);
+    console.log("[SignalR] Connection started successfully");
     try {
+      console.log("[SignalR] Invoking SubscribeLiveLapboardDataForLapboard");
       await proxy.invoke("SubscribeLiveLapboardDataForLapboard");
+      console.log("[SignalR] Subscribe invocation successful");
     } catch (e) {
       console.warn("Legacy subscribe failed or not required", e?.message);
     }
   } catch (err) {
+    console.error("[SignalR] Connection start failed", { error: err?.message });
     // If https fails, retry over http once
     if (/^https:/i.test(baseUrl)) {
       const httpUrl = baseUrl.replace(/^https:/i, "http:");
-      console.warn("Retrying legacy SignalR over http due to SSL error");
+      console.warn(
+        "[SignalR] Retrying legacy SignalR over http due to SSL error"
+      );
       const retryConn = $.hubConnection(httpUrl, { useDefaultPath: false });
       const retryProxy = retryConn.createHubProxy("LiveLTTimingDataHub");
       retryProxy.on("SendLiveLapboardData", onLap);
@@ -178,7 +204,7 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
         await retryProxy.invoke("SubscribeLiveLapboardDataForLapboard");
       } catch (e) {
         console.warn(
-          "Legacy subscribe failed or not required (retry)",
+          "[SignalR] Legacy subscribe failed or not required (retry)",
           e?.message
         );
       }
@@ -191,6 +217,7 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     }
     throw err;
   }
+  console.log("[SignalR] Legacy feed fully started and subscribed");
 
   return () => {
     try {

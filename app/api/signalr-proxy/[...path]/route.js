@@ -26,6 +26,14 @@ async function proxy(request, ctx) {
   } else {
     outgoingHeaders.delete("host");
   }
+  // For GET/HEAD, some servers reject a Content-Type; remove it to be safe
+  if (request.method === "GET" || request.method === "HEAD") {
+    outgoingHeaders.delete("content-type");
+  }
+  // Normalize Accept header for negotiate
+  if (!outgoingHeaders.get("accept")) {
+    outgoingHeaders.set("accept", "*/*");
+  }
   // Allow cross-origin on the response
 
   const init = {

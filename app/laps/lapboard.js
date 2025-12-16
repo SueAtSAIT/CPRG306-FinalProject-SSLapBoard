@@ -131,7 +131,7 @@ export default function Lapboard({
             <button
               onClick={() => setSelectedColour("White")}
               className={`${
-                selectedColour === "White" ? "ring-2 ring-white/70" : ""
+                selectedColour === "White" ? "ring-2 ring-gray-500" : ""
               }`}
               aria-label="Select White">
               {liveFeedActive ?? liveActive ? (
@@ -237,20 +237,6 @@ export default function Lapboard({
                 />
               )}
             </button>
-            {/* TODO: remove manual mode if auto-detect skater feed can render the correct skater colours and disable the plus/minus buttons */}
-            {/* <button
-              onClick={() => onManualModeToggle(!manualMode)}
-              className={`p-3 rounded-lg transition-colors ${
-                manualMode
-                  ? "bg-blue-500 text-white"
-                  : darkMode
-                  ? "bg-gray-700 text-gray-300"
-                  : "bg-gray-200 text-gray-600"
-              }`}
-              aria-label="Toggle manual mode"
-              title={manualMode ? "Manual Mode ON" : "Live Feed Mode"}>
-              <Icon icon="la:hand-pointer" height="36" />
-            </button> */}
           </div>
           <div className="absolute bottom-8 left-8 flex flex-col gap-3 z-10">
             <button

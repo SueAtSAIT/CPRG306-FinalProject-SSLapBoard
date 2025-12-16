@@ -129,7 +129,7 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
   const connection = $.hubConnection(normalizedUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
 
-  proxy.on("SendLiveLapboardData", (timingDataArray) => {
+  const onLap = (timingDataArray) => {
     try {
       const laps = Array.isArray(timingDataArray)
         ? timingDataArray.map(normalizeTimingData)
@@ -138,7 +138,9 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     } catch (e) {
       console.error("Lap handler error (legacy)", e);
     }
-  });
+  };
+
+  proxy.on("SendLiveLapboardData", onLap);
 
   try {
     await connection.start();
@@ -154,10 +156,7 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
       console.warn("Retrying legacy SignalR over http due to SSL error");
       const retryConn = $.hubConnection(httpUrl, { useDefaultPath: false });
       const retryProxy = retryConn.createHubProxy("LiveLTTimingDataHub");
-      retryProxy.on(
-        "SendLiveLapboardData",
-        proxy._.callbacks.SendLiveLapboardData
-      );
+      retryProxy.on("SendLiveLapboardData", onLap);
       await retryConn.start();
       try {
         await retryProxy.invoke("SubscribeLiveLapboardDataForLapboard");

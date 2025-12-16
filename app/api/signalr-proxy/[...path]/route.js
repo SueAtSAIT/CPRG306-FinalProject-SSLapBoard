@@ -32,7 +32,24 @@ async function proxy(request, ctx) {
         : await request.arrayBuffer(),
   };
 
-  const resp = await fetch(targetUrl, init);
+  let resp;
+  try {
+    resp = await fetch(targetUrl, init);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown fetch error";
+    console.error("[SignalR Proxy] fetch failed", {
+      targetUrl,
+      message,
+    });
+    return new Response(
+      JSON.stringify({ error: "fetch_failed", targetUrl, message }),
+      {
+        status: 502,
+        headers: { "content-type": "application/json" },
+      }
+    );
+  }
   const respHeaders = new Headers(resp.headers);
   respHeaders.set("access-control-allow-origin", "*");
 

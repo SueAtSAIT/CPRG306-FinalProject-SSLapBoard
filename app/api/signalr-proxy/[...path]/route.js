@@ -37,23 +37,41 @@ async function proxy(request, ctx) {
   respHeaders.set("access-control-allow-origin", "*");
 
   // For negotiate responses, rewrite URLs to use our proxy
-  if (
-    resolved?.path?.[0] === "negotiate" &&
-    respHeaders.get("content-type")?.includes("application/json")
-  ) {
-    const body = await resp.json();
-    if (body && body.Url) {
-      // Replace the remote base URL with our proxy base
-      const remoteBase = DEFAULT_TARGET.replace(/\/+$/g, "");
-      const origin =
-        url.protocol === "http:" ? url.origin : `${url.protocol}//${url.host}`;
-      body.Url = body.Url.replace(remoteBase, `${origin}/api/signalr-proxy`);
+  const pathStr = Array.isArray(resolved?.path) ? resolved.path.join("/") : "";
+  if (pathStr === "negotiate" || pathStr.endsWith("/negotiate")) {
+    const contentType = respHeaders.get("content-type") || "";
+    if (contentType.includes("application/json") || resp.status === 200) {
+      const body = await resp.json();
+      if (body && body.Url) {
+        const originalUrl = body.Url;
+        // Handle both absolute and relative URLs
+        if (
+          originalUrl.startsWith("http://") ||
+          originalUrl.startsWith("https://")
+        ) {
+          // Absolute URL: replace the entire base
+          const remoteBase = DEFAULT_TARGET.replace(/\/+$/g, "");
+          body.Url = body.Url.replace(
+            remoteBase,
+            `${url.origin}/api/signalr-proxy`
+          );
+        } else if (originalUrl.startsWith("/")) {
+          // Relative URL: prepend proxy path
+          body.Url = `/api/signalr-proxy${originalUrl.replace(
+            /^\/signalr/,
+            ""
+          )}`;
+        }
+        console.log(
+          `[SignalR Proxy] Rewrote negotiate Url: ${originalUrl} -> ${body.Url}`
+        );
+      }
+      return new Response(JSON.stringify(body), {
+        status: resp.status,
+        statusText: resp.statusText,
+        headers: respHeaders,
+      });
     }
-    return new Response(JSON.stringify(body), {
-      status: resp.status,
-      statusText: resp.statusText,
-      headers: respHeaders,
-    });
   }
 
   return new Response(resp.body, {

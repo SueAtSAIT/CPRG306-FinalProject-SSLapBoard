@@ -14,6 +14,7 @@ function loadScript(src) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
     if (existing) {
+      if (existing.getAttribute("data-loaded") === "true") return resolve();
       existing.addEventListener("load", () => resolve());
       existing.addEventListener("error", (e) => reject(e));
       if (existing.complete) resolve();
@@ -22,20 +23,44 @@ function loadScript(src) {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
+    script.onload = () => {
+      script.setAttribute("data-loaded", "true");
+      resolve();
+    };
     script.onerror = (e) => reject(e);
     document.body.appendChild(script);
   });
+}
+
+async function loadFirstAvailable(urls) {
+  const errors = [];
+  for (const url of urls) {
+    try {
+      await loadScript(url);
+      return url;
+    } catch (e) {
+      errors.push({ url, message: e?.message });
+    }
+  }
+  const detail = errors
+    .map((e) => `${e.url}: ${e.message || "failed"}`)
+    .join("; ");
+  throw new Error(`All script sources failed: ${detail}`);
 }
 
 async function ensureLegacyClient() {
   if (legacyClientPromise) return legacyClientPromise;
   // jQuery + ASP.NET SignalR 2.4.x client from CDN
   legacyClientPromise = (async () => {
-    await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
-    await loadScript(
-      "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/2.4.3/jquery.signalR.min.js"
-    );
+    await loadFirstAvailable([
+      "https://code.jquery.com/jquery-3.6.0.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
+    ]);
+    await loadFirstAvailable([
+      "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/2.4.3/jquery.signalR.min.js",
+      "https://unpkg.com/microsoft-signalr@2.4.3/jquery.signalR.min.js",
+      "https://cdn.jsdelivr.net/npm/microsoft-signalr@2.4.3/jquery.signalR.min.js",
+    ]);
     if (!window.$ || !window.$.hubConnection) {
       throw new Error("Legacy SignalR client failed to load");
     }

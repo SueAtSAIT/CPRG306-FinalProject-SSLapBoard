@@ -36,6 +36,15 @@ async function proxy(request, ctx) {
   }
   // Allow cross-origin on the response
 
+  // Diagnostic logging for upstream request details
+  const hostForUpstream = outgoingHeaders.get("host") || "<none>";
+  console.log("[SignalR Proxy] Forwarding", {
+    method,
+    targetUrl,
+    host: hostForUpstream,
+    path: Array.isArray(resolved?.path) ? resolved.path.join("/") : "",
+  });
+
   const init = {
     method,
     headers: outgoingHeaders,
@@ -102,9 +111,10 @@ async function proxy(request, ctx) {
             ""
           )}`;
         }
-        console.log(
-          `[SignalR Proxy] Rewrote negotiate Url: ${originalUrl} -> ${body.Url}`
-        );
+        console.log("[SignalR Proxy] Negotiate URL rewrite", {
+          originalUrl,
+          rewrittenUrl: body.Url,
+        });
       }
       return new Response(JSON.stringify(body), {
         status: resp.status,

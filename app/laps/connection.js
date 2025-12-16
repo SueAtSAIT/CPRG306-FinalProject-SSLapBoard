@@ -87,6 +87,11 @@ export async function startLapFeed(connection, onLapArray) {
     }
   });
 
+  connection.on("Lap", function (data) {
+    console.log("[SignalR] Lap event:", data); // Add this
+    onLapArray(data);
+  });
+
   await connection.start();
 
   // Attempt to subscribe to server feed if available

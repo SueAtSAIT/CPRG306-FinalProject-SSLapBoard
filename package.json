@@ -11,10 +11,12 @@
   "dependencies": {
     "@microsoft/signalr": "^10.0.0",
     "@next/third-parties": "^16.0.10",
+    "jquery": "^3.6.0",
     "next": "16.0.10",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "react-full-screen": "^1.1.1"
+    "react-full-screen": "^1.1.1",
+    "signalr": "2.4.3"
   },
   "devDependencies": {
     "@iconify-icon/react": "^3.0.3",

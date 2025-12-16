@@ -10,59 +10,19 @@ const ASPNET_SERVER_ERROR_TEXT =
 
 let legacyClientPromise = null;
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      if (existing.getAttribute("data-loaded") === "true") return resolve();
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", (e) => reject(e));
-      if (existing.complete) resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = () => {
-      script.setAttribute("data-loaded", "true");
-      resolve();
-    };
-    script.onerror = (e) => reject(e);
-    document.body.appendChild(script);
-  });
-}
-
-async function loadFirstAvailable(urls) {
-  const errors = [];
-  for (const url of urls) {
-    try {
-      await loadScript(url);
-      return url;
-    } catch (e) {
-      errors.push({ url, message: e?.message });
-    }
-  }
-  const detail = errors
-    .map((e) => `${e.url}: ${e.message || "failed"}`)
-    .join("; ");
-  throw new Error(`All script sources failed: ${detail}`);
-}
-
 async function ensureLegacyClient() {
   if (legacyClientPromise) return legacyClientPromise;
-  // jQuery + ASP.NET SignalR 2.4.x client from CDN
   legacyClientPromise = (async () => {
-    await loadFirstAvailable([
-      "/vendor/jquery-3.6.0.min.js",
-      "https://code.jquery.com/jquery-3.6.0.min.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
-    ]);
-    await loadFirstAvailable([
-      "/vendor/jquery.signalR-2.4.3.min.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/2.4.3/jquery.signalR.min.js",
-      "https://unpkg.com/microsoft-signalr@2.4.3/jquery.signalR.min.js",
-      "https://cdn.jsdelivr.net/npm/microsoft-signalr@2.4.3/jquery.signalR.min.js",
-    ]);
+    if (typeof window === "undefined") {
+      throw new Error("Legacy SignalR requires a browser environment");
+    }
+
+    const { default: jQuery } = await import("jquery");
+    // Assign to globals for the SignalR client to attach
+    window.jQuery = window.$ = jQuery;
+
+    await import("signalr");
+
     if (!window.$ || !window.$.hubConnection) {
       throw new Error("Legacy SignalR client failed to load");
     }
@@ -147,10 +107,26 @@ export async function startLapFeed(connection, onLapArray) {
   };
 }
 
+function normalizeLegacyUrl(url) {
+  // Ensure single /signalr suffix and prefer http if no protocol specified
+  let normalized = url || DEFAULT_HUB_URL;
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `http://${normalized}`;
+  }
+  // Remove trailing slashes
+  normalized = normalized.replace(/\/+$/g, "");
+  // Ensure exactly one /signalr at the end
+  if (!/\/signalr$/i.test(normalized)) {
+    normalized = `${normalized}/signalr`;
+  }
+  return normalized;
+}
+
 async function startLegacyLapFeed(hubUrl, onLapArray) {
   const $ = await ensureLegacyClient();
 
-  const connection = $.hubConnection(hubUrl);
+  const normalizedUrl = normalizeLegacyUrl(hubUrl);
+  const connection = $.hubConnection(normalizedUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
 
   proxy.on("SendLiveLapboardData", (timingDataArray) => {
@@ -164,11 +140,41 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     }
   });
 
-  await connection.start();
   try {
-    await proxy.invoke("SubscribeLiveLapboardDataForLapboard");
-  } catch (e) {
-    console.warn("Legacy subscribe failed or not required", e?.message);
+    await connection.start();
+    try {
+      await proxy.invoke("SubscribeLiveLapboardDataForLapboard");
+    } catch (e) {
+      console.warn("Legacy subscribe failed or not required", e?.message);
+    }
+  } catch (err) {
+    // If https fails, retry over http once
+    if (/^https:/i.test(normalizedUrl)) {
+      const httpUrl = normalizedUrl.replace(/^https:/i, "http:");
+      console.warn("Retrying legacy SignalR over http due to SSL error");
+      const retryConn = $.hubConnection(httpUrl, { useDefaultPath: false });
+      const retryProxy = retryConn.createHubProxy("LiveLTTimingDataHub");
+      retryProxy.on(
+        "SendLiveLapboardData",
+        proxy._.callbacks.SendLiveLapboardData
+      );
+      await retryConn.start();
+      try {
+        await retryProxy.invoke("SubscribeLiveLapboardDataForLapboard");
+      } catch (e) {
+        console.warn(
+          "Legacy subscribe failed or not required (retry)",
+          e?.message
+        );
+      }
+      return () => {
+        try {
+          retryProxy.off("SendLiveLapboardData");
+          retryConn.stop();
+        } catch {}
+      };
+    }
+    throw err;
   }
 
   return () => {

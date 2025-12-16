@@ -4,6 +4,12 @@ const DEFAULT_TARGET =
   process.env.SIGNALR_LEGACY_BASE ||
   "http://stcal-comp-web.knes.ucalgary.ca:5264/signalr";
 const LEGACY_HOST = process.env.SIGNALR_LEGACY_HOST || null;
+// Derive hostname from DEFAULT_TARGET for fallback when LEGACY_HOST isn't set
+let DEFAULT_TARGET_HOST = null;
+try {
+  const parsed = new URL(DEFAULT_TARGET);
+  DEFAULT_TARGET_HOST = parsed.hostname;
+} catch {}
 
 function buildTargetUrl(pathSegments, search) {
   let base = DEFAULT_TARGET.replace(/\/+$/g, "");
@@ -24,7 +30,12 @@ async function proxy(request, ctx) {
   if (LEGACY_HOST) {
     outgoingHeaders.set("host", LEGACY_HOST);
   } else {
-    outgoingHeaders.delete("host");
+    // If not explicitly provided, use host from DEFAULT_TARGET when available
+    if (DEFAULT_TARGET_HOST) {
+      outgoingHeaders.set("host", DEFAULT_TARGET_HOST);
+    } else {
+      outgoingHeaders.delete("host");
+    }
   }
   // For GET/HEAD, some servers reject a Content-Type; remove it to be safe
   if (request.method === "GET" || request.method === "HEAD") {
@@ -78,6 +89,11 @@ async function proxy(request, ctx) {
 
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
+    console.warn("[SignalR Proxy] Upstream non-OK", {
+      targetUrl,
+      status: resp.status,
+      statusText: resp.statusText,
+    });
     return new Response(text || JSON.stringify({ status: resp.status }), {
       status: resp.status,
       statusText: resp.statusText,

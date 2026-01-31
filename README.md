@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Speed Skating Lap Board
 
-## Getting Started
 
-First, run the development server:
+For Best Results:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+use on iPad in Landscape orientation.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+go fullscreen with fullscreen icon
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+select skater by active (live timing system) armband colour 
 
-## Learn More
+if no active skaters indicated by active armband colours, use Manual Mode + and -
 
-To learn more about Next.js, take a look at the following resources:
+colour scheme can be updated in settings - numbers and dark mode vs light mode
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+click Launch to automatically connect to the Calgary Olympic Oval timing system
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+Features: 
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+parses the skater's time to seconds and tenths, like a coach's manual lap board display
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+can change skaters in real-time by selecting another colour, able to coach two skaters in the same quad 
+
+
+Feedback welcome. 

@@ -36,6 +36,29 @@ export default function Lapboard({
   const [connectionAttempts, setConnectionAttempts] = useState(0); // Track connection attempts
   const handle = useFullScreenHandle();
 
+  const selectedLap = useMemo(
+    () => lastLapByColour[selectedColour],
+    [selectedColour, lastLapByColour],
+  );
+
+  const isColourActive = useMemo(() => {
+    return (colour) =>
+      Boolean(activeColours[colour]) || Boolean(lastLapByColour[colour]);
+  }, [activeColours, lastLapByColour]);
+
+  const lapDigits = useMemo(() => {
+    if (selectedLap?.LapTime != null) {
+      const { secondsDigit, tenthsDigit } = parseLapDigits(selectedLap.LapTime);
+      return {
+        secondsDigit: Number.isFinite(secondsDigit)
+          ? secondsDigit
+          : initialValue,
+        tenthsDigit: Number.isFinite(tenthsDigit) ? tenthsDigit : initialValue,
+      };
+    }
+    return { secondsDigit: initialValue, tenthsDigit: initialValue };
+  }, [selectedLap]);
+
   const incrementSeconds = () => {
     console.log("seconds + clicked");
     setSeconds((prev) => (prev + 1) % 10);
@@ -59,34 +82,13 @@ export default function Lapboard({
     let dispose = null;
     startLapFeedAuto(
       (lapsByColour) => {
-        // lapsByColour is already organized: { White: {...}, Red: {...}, etc. }
-        const active = {};
-        Object.entries(lapsByColour).forEach(([colour, lap]) => {
-          if (lap && lap.EventType === "Lap") {
-            active[colour] = true;
-          }
-        });
+        // Merge incoming laps so each colour updates independently
+        setLastLapByColour((prev) => ({ ...prev, ...lapsByColour }));
 
-        setActiveColours(active);
-        setLastLapByColour(lapsByColour);
-        setLiveActive(Object.keys(lapsByColour).length > 0);
-
-        // If no selection yet, pick the first active colour
-        if (!selectedColour) {
-          const first = Object.keys(active)[0];
-          if (first) setSelectedColour(first);
-        }
-
-        // Update displayed digits from selected colour
-        const selectedLap = selectedColour
-          ? lapsByColour[selectedColour]
-          : null;
-        if (selectedLap?.LapTime != null) {
-          const { secondsDigit, tenthsDigit } = parseLapDigits(
-            selectedLap.LapTime,
-          );
-          if (Number.isFinite(secondsDigit)) setSeconds(secondsDigit);
-          if (Number.isFinite(tenthsDigit)) setTenths(tenthsDigit);
+        // If no selection yet, pick the first available colour
+        if (Object.keys(lapsByColour).length > 0) {
+          const first = Object.keys(lapsByColour)[0];
+          setSelectedColour((prev) => prev ?? first);
         }
       },
       undefined,
@@ -98,6 +100,12 @@ export default function Lapboard({
         } else {
           console.log("[Lapboard] SignalR connection lost");
         }
+      },
+      (colourActivity) => {
+        // Handle ShowColor/HideColor events
+        console.log("[Lapboard] Colour activity update:", colourActivity);
+        setActiveColours((prev) => ({ ...prev, ...colourActivity }));
+        setLiveActive(Object.values(colourActivity).some((active) => active));
       },
     )
       .then((cleanup) => {
@@ -114,7 +122,13 @@ export default function Lapboard({
     return () => {
       if (dispose) dispose();
     };
-  }, [selectedColour]);
+  }, []); // Only run on mount/unmount to avoid reconnecting on colour change
+
+  // Update displayed digits when selected lap changes
+  useEffect(() => {
+    setSeconds(lapDigits.secondsDigit);
+    setTenths(lapDigits.tenthsDigit);
+  }, [lapDigits]);
 
   // Poll connection status: 5s initial, then 30s after first check
   useEffect(() => {
@@ -180,16 +194,8 @@ export default function Lapboard({
                 selectedColour === "White" ? "ring-2 ring-gray-500" : ""
               }`}
               aria-label="Select White">
-              {(liveFeedActive ?? liveActive) ? (
-                activeColours["White"] ? (
-                  <Icon icon="openmoji:white-circle" height="40" />
-                ) : (
-                  <Icon
-                    icon="clarity:ban-line"
-                    height="40"
-                    style={{ color: darkMode ? "#ffffff" : "#000000" }}
-                  />
-                )
+              {isColourActive("White") ? (
+                <Icon icon="openmoji:white-circle" height="40" />
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -205,20 +211,12 @@ export default function Lapboard({
                 selectedColour === "Red" ? "ring-2 ring-red-400" : ""
               }`}
               aria-label="Select Red">
-              {(liveFeedActive ?? liveActive) ? (
-                activeColours["Red"] ? (
-                  <Icon
-                    icon="clarity:circle-solid"
-                    height="40"
-                    style={{ color: "#ff0000" }}
-                  />
-                ) : (
-                  <Icon
-                    icon="clarity:ban-line"
-                    height="40"
-                    style={{ color: "#ff0000" }}
-                  />
-                )
+              {isColourActive("Red") ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#ff0000" }}
+                />
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -233,20 +231,12 @@ export default function Lapboard({
                 selectedColour === "Yellow" ? "ring-2 ring-yellow-300" : ""
               }`}
               aria-label="Select Yellow">
-              {(liveFeedActive ?? liveActive) ? (
-                activeColours["Yellow"] ? (
-                  <Icon
-                    icon="clarity:circle-solid"
-                    height="40"
-                    style={{ color: "#f4e641" }}
-                  />
-                ) : (
-                  <Icon
-                    icon="clarity:ban-line"
-                    height="40"
-                    style={{ color: "#f4e641" }}
-                  />
-                )
+              {isColourActive("Yellow") ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#f4e641" }}
+                />
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -261,20 +251,12 @@ export default function Lapboard({
                 selectedColour === "Blue" ? "ring-2 ring-blue-400" : ""
               }`}
               aria-label="Select Blue">
-              {(liveFeedActive ?? liveActive) ? (
-                activeColours["Blue"] ? (
-                  <Icon
-                    icon="clarity:circle-solid"
-                    height="40"
-                    style={{ color: "#1037df" }}
-                  />
-                ) : (
-                  <Icon
-                    icon="clarity:ban-line"
-                    height="40"
-                    style={{ color: "#1037df" }}
-                  />
-                )
+              {isColourActive("Blue") ? (
+                <Icon
+                  icon="clarity:circle-solid"
+                  height="40"
+                  style={{ color: "#1037df" }}
+                />
               ) : (
                 <Icon
                   icon="clarity:ban-line"
@@ -320,7 +302,7 @@ export default function Lapboard({
             </span>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6">
-            {selectedColour && lastLapByColour[selectedColour] && (
+            {selectedColour && selectedLap && (
               <div className="text-center">
                 <p
                   className="text-xs pointer-events-none"
@@ -332,7 +314,16 @@ export default function Lapboard({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                   }}>
-                  {lastLapByColour[selectedColour].Name}
+                  {selectedLap.Name || "Unknown"}
+                </p>
+              </div>
+            )}
+            {selectedColour && !selectedLap && (
+              <div className="text-center">
+                <p
+                  className="text-xs"
+                  style={{ fontSize: "10px", opacity: 0.5 }}>
+                  No data
                 </p>
               </div>
             )}

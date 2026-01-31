@@ -93,12 +93,20 @@ export function normalizeTimingData(timingData) {
 
 // Helper: subscribe to server method that streams lapboard data
 // server method name may differ; using "SendLiveLapboardData" client callback
-export async function startLapFeed(connection, onLapArray, onConnectionStatus) {
+export async function startLapFeed(
+  connection,
+  onLapArray,
+  onConnectionStatus,
+  onColorActivity,
+) {
   if (!connection) throw new Error("Connection not provided");
 
   currentConnection = connection;
   connectionStarted = false;
   if (onConnectionStatus) onConnectionStatus(false);
+
+  // Keep track of active colors across messages
+  let currentActiveColours = {};
 
   // Register client handler that server invokes with an array of timingData
   connection.on("SendLiveLapboardData", (timingDataArray) => {
@@ -109,7 +117,26 @@ export async function startLapFeed(connection, onLapArray, onConnectionStatus) {
 
       // Organize lap data by GroupID (color)
       const lapsByColour = {};
+      const activeColourUpdates = {}; // Only Show/Hide updates in this message
+      let hasColorUpdates = false;
+
       laps.forEach((lap) => {
+        // Handle ShowColor/HideColor events based on EventType
+        if (lap?.EventType?.startsWith("Show")) {
+          const colour = lap.EventType.replace("Show", ""); // "ShowRed" -> "Red"
+          activeColourUpdates[colour] = true;
+          currentActiveColours[colour] = true;
+          hasColorUpdates = true;
+          console.log(`[SignalR] Show event: ${colour}`);
+        } else if (lap?.EventType?.startsWith("Hide")) {
+          const colour = lap.EventType.replace("Hide", ""); // "HideRed" -> "Red"
+          activeColourUpdates[colour] = false;
+          currentActiveColours[colour] = false;
+          hasColorUpdates = true;
+          console.log(`[SignalR] Hide event: ${colour}`);
+        }
+
+        // Handle Lap events for lap data
         if (lap?.EventType === "Lap") {
           const colour = lap.GroupId || lap.GroupID;
           if (colour) {
@@ -118,21 +145,22 @@ export async function startLapFeed(connection, onLapArray, onConnectionStatus) {
         }
       });
 
+      // Notify about color activity if callback provided and we have Show/Hide events
+      if (onColorActivity && hasColorUpdates) {
+        console.log("[SignalR] Callback invoked with:", activeColourUpdates);
+        onColorActivity(activeColourUpdates);
+      }
+
+      // Always call onLapArray with the lap data (may be empty if no Lap events)
       onLapArray?.(lapsByColour);
     } catch (e) {
       console.error("Lap handler error", e);
     }
   });
 
-  connection.on("Lap", function (data) {
-    console.log("[SignalR] Lap event:", data); // Add this
-    onLapArray(data);
-  });
-
   await connection.start();
   connectionStarted = true;
   if (onConnectionStatus) onConnectionStatus(true);
-  console.log("[SignalR] Connection started and subscribed");
 
   // Attempt to subscribe to server feed if available
   try {
@@ -169,11 +197,19 @@ function normalizeLegacyUrl(url) {
   return normalized;
 }
 
-async function startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus) {
+async function startLegacyLapFeed(
+  hubUrl,
+  onLapArray,
+  onConnectionStatus,
+  onColorActivity,
+) {
   const $ = await ensureLegacyClient();
   console.log("[SignalR] startLegacyLapFeed started", { hubUrl });
   connectionStarted = false;
   if (onConnectionStatus) onConnectionStatus(false);
+
+  // Keep track of active colors across messages
+  let currentActiveColours = {};
 
   // If running in a secure context (https), route via same-origin proxy to avoid HTTPS upgrade/mixed content issues in browsers like Chrome
   const shouldProxy =
@@ -183,34 +219,50 @@ async function startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus) {
   const baseUrl = shouldProxy
     ? "/api/signalr-proxy"
     : normalizeLegacyUrl(hubUrl);
-  console.log("[SignalR] Hub base URL", { baseUrl, shouldProxy });
   const connection = $.hubConnection(baseUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
-  console.log("[SignalR] Hub proxy created", {
-    hubName: "LiveLTTimingDataHub",
-  });
 
   const onLap = (timingDataArray) => {
     try {
-      console.log("[SignalR] SendLiveLapboardData event received", {
-        count: Array.isArray(timingDataArray) ? timingDataArray.length : 0,
-        data: timingDataArray,
-      });
       const laps = Array.isArray(timingDataArray)
         ? timingDataArray.map(normalizeTimingData)
         : [];
 
       // Organize lap data by GroupID (color)
       const lapsByColour = {};
+      const activeColourUpdates = {}; // Only Show/Hide updates in this message
+      let hasColorUpdates = false;
+
       laps.forEach((lap) => {
+        // Handle ShowColor/HideColor events based on EventType
+        if (lap?.EventType?.startsWith("Show")) {
+          const colour = lap.EventType.replace("Show", ""); // "ShowRed" -> "Red"
+          activeColourUpdates[colour] = true;
+          currentActiveColours[colour] = true;
+          hasColorUpdates = true;
+          console.log(`[SignalR] Show event: ${colour}`);
+        } else if (lap?.EventType?.startsWith("Hide")) {
+          const colour = lap.EventType.replace("Hide", ""); // "HideRed" -> "Red"
+          activeColourUpdates[colour] = false;
+          currentActiveColours[colour] = false;
+          hasColorUpdates = true;
+          console.log(`[SignalR] Hide event: ${colour}`);
+        }
+
+        // Handle Lap events for lap data
         if (lap?.EventType === "Lap") {
           const colour = lap.GroupId || lap.GroupID;
           if (colour) {
             lapsByColour[colour] = lap;
           }
-          console.log(`Lap colour: ${colour} setting ${lapsByColour}`);
         }
       });
+
+      // Notify about color activity if callback provided and we have Show/Hide events
+      if (onColorActivity && hasColorUpdates) {
+        console.log("[SignalR] Callback invoked with:", activeColourUpdates);
+        onColorActivity(activeColourUpdates);
+      }
 
       onLapArray?.(lapsByColour);
     } catch (e) {
@@ -221,30 +273,17 @@ async function startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus) {
   console.log("[SignalR] Registering SendLiveLapboardData handler");
   proxy.on("SendLiveLapboardData", onLap);
 
-  // Also register a catch-all to see what other events are being received
-  connection.client = connection.client || {};
-  connection.client.receiveData = function (method, data) {
-    console.log("[SignalR] Server invoked method (catch-all)", {
-      method,
-      dataKeys: typeof data === "object" ? Object.keys(data) : typeof data,
-    });
-  };
-
   try {
     // Disable WebSockets when using proxy (Next.js API routes don't support WS upgrades)
     const startOptions = shouldProxy
       ? { transport: ["serverSentEvents", "longPolling"] }
       : {};
-    console.log("[SignalR] Starting connection", { startOptions });
     await connection.start(startOptions);
     connectionStarted = true;
     currentConnection = connection;
     if (onConnectionStatus) onConnectionStatus(true);
-    console.log("[SignalR] Connection started successfully");
     try {
-      console.log("[SignalR] Invoking SubscribeLiveLapboardDataForLapboard");
       await proxy.invoke("SubscribeLiveLapboardDataForLapboard");
-      console.log("[SignalR] Subscribe invocation successful");
     } catch (e) {
       console.warn("Legacy subscribe failed or not required", e?.message);
     }
@@ -299,21 +338,37 @@ export async function startLapFeedAuto(
   onLapArray,
   hubUrl = DEFAULT_HUB_URL,
   onConnectionStatus,
+  onColorActivity,
 ) {
   // If the path looks like legacy (/signalr), prefer legacy immediately to avoid noisy errors
   if (hubUrl.toLowerCase().includes("/signalr")) {
-    return await startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus);
+    return await startLegacyLapFeed(
+      hubUrl,
+      onLapArray,
+      onConnectionStatus,
+      onColorActivity,
+    );
   }
 
   // Prefer modern client; if ASP.NET detected, fall back to legacy client
   try {
     const connection = createConnection(hubUrl);
-    return await startLapFeed(connection, onLapArray, onConnectionStatus);
+    return await startLapFeed(
+      connection,
+      onLapArray,
+      onConnectionStatus,
+      onColorActivity,
+    );
   } catch (e) {
     const message = e?.message || "";
     if (message.includes(ASPNET_SERVER_ERROR_TEXT)) {
       console.warn("ASP.NET SignalR detected, switching to legacy client");
-      return await startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus);
+      return await startLegacyLapFeed(
+        hubUrl,
+        onLapArray,
+        onConnectionStatus,
+        onColorActivity,
+      );
     }
     throw e;
   }

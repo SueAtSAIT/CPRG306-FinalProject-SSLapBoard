@@ -50,14 +50,34 @@ export default function Lapboard({
     if (selectedLap?.LapTime != null) {
       const { secondsDigit, tenthsDigit } = parseLapDigits(selectedLap.LapTime);
       return {
-        secondsDigit: Number.isFinite(secondsDigit)
-          ? secondsDigit
-          : initialValue,
-        tenthsDigit: Number.isFinite(tenthsDigit) ? tenthsDigit : initialValue,
+        secondsDigit: Number.isFinite(secondsDigit) ? secondsDigit : null,
+        tenthsDigit: Number.isFinite(tenthsDigit) ? tenthsDigit : null,
       };
     }
-    return { secondsDigit: initialValue, tenthsDigit: initialValue };
+    return { secondsDigit: null, tenthsDigit: null };
   }, [selectedLap]);
+
+  const displayDigits = useMemo(() => {
+    const hasParsedDigits =
+      lapDigits.secondsDigit != null || lapDigits.tenthsDigit != null;
+
+    if (selectedLap?.Name && !hasParsedDigits) {
+      return { seconds: "-", tenths: "-" };
+    }
+
+    if (hasParsedDigits) {
+      return {
+        seconds:
+          lapDigits.secondsDigit != null
+            ? lapDigits.secondsDigit
+            : initialValue,
+        tenths:
+          lapDigits.tenthsDigit != null ? lapDigits.tenthsDigit : initialValue,
+      };
+    }
+
+    return { seconds, tenths };
+  }, [selectedLap, lapDigits, seconds, tenths, initialValue]);
 
   const incrementSeconds = () => {
     console.log("seconds + clicked");
@@ -123,12 +143,6 @@ export default function Lapboard({
       if (dispose) dispose();
     };
   }, []); // Only run on mount/unmount to avoid reconnecting on colour change
-
-  // Update displayed digits when selected lap changes
-  useEffect(() => {
-    setSeconds(lapDigits.secondsDigit);
-    setTenths(lapDigits.tenthsDigit);
-  }, [lapDigits]);
 
   // Poll connection status: 5s initial, then 30s after first check
   useEffect(() => {
@@ -349,7 +363,7 @@ export default function Lapboard({
                     color: secondsColour,
                     WebkitTextStroke: `0.5px ${secondsColour}`,
                   }}>
-                  {seconds}
+                  {displayDigits.seconds}
                 </p>
                 <button
                   type="button"
@@ -387,7 +401,7 @@ export default function Lapboard({
                     color: tenthsColour,
                     WebkitTextStroke: `0.5px ${tenthsColour}`,
                   }}>
-                  {tenths}
+                  {displayDigits.tenths}
                 </p>
                 <button
                   type="button"

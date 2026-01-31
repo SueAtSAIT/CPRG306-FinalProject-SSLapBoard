@@ -128,12 +128,31 @@ export async function startLapFeed(
           currentActiveColours[colour] = true;
           hasColorUpdates = true;
           console.log(`[SignalR] Show event: ${colour}`);
+
+          if (lap?.Name) {
+            lapsByColour[colour] = {
+              ...lap,
+              GroupId: colour,
+              LapTime: null,
+            };
+          }
         } else if (lap?.EventType?.startsWith("Hide")) {
           const colour = lap.EventType.replace("Hide", ""); // "HideRed" -> "Red"
           activeColourUpdates[colour] = false;
           currentActiveColours[colour] = false;
           hasColorUpdates = true;
           console.log(`[SignalR] Hide event: ${colour}`);
+        }
+
+        if (lap?.EventType !== "Lap") {
+          const colour = lap.GroupId || lap.GroupID;
+          if (colour && lap?.Name && !lapsByColour[colour]) {
+            lapsByColour[colour] = {
+              ...lap,
+              GroupId: colour,
+              LapTime: null,
+            };
+          }
         }
 
         // Handle Lap events for lap data
@@ -241,12 +260,31 @@ async function startLegacyLapFeed(
           currentActiveColours[colour] = true;
           hasColorUpdates = true;
           console.log(`[SignalR] Show event: ${colour}`);
+
+          if (lap?.Name) {
+            lapsByColour[colour] = {
+              ...lap,
+              GroupId: colour,
+              LapTime: null,
+            };
+          }
         } else if (lap?.EventType?.startsWith("Hide")) {
           const colour = lap.EventType.replace("Hide", ""); // "HideRed" -> "Red"
           activeColourUpdates[colour] = false;
           currentActiveColours[colour] = false;
           hasColorUpdates = true;
           console.log(`[SignalR] Hide event: ${colour}`);
+        }
+
+        if (lap?.EventType !== "Lap") {
+          const colour = lap.GroupId || lap.GroupID;
+          if (colour && lap?.Name && !lapsByColour[colour]) {
+            lapsByColour[colour] = {
+              ...lap,
+              GroupId: colour,
+              LapTime: null,
+            };
+          }
         }
 
         // Handle Lap events for lap data

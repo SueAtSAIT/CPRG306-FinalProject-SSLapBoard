@@ -8,7 +8,28 @@ const DEFAULT_HUB_URL = "http://STCAL-COMP-WEB.knes.ucalgary.ca:5264/signalr";
 const ASPNET_SERVER_ERROR_TEXT =
   "Detected a connection attempt to an ASP.NET SignalR Server";
 
+// Connection state tracking
+let currentConnection = null;
+let connectionStarted = false;
+
 let legacyClientPromise = null;
+
+// Check if SignalR connection is active
+export function isConnectionActive() {
+  if (!currentConnection) return false;
+
+  // Check connection state for modern SignalR
+  if (currentConnection.state !== undefined) {
+    return currentConnection.state === 1; // HubConnectionState.Connected = 1
+  }
+
+  // Check connection state for legacy SignalR
+  if (currentConnection.state !== undefined) {
+    return currentConnection.state === 1; // ConnectionState.Connected = 1
+  }
+
+  return connectionStarted;
+}
 
 async function ensureLegacyClient() {
   if (legacyClientPromise) return legacyClientPromise;
@@ -72,8 +93,12 @@ export function normalizeTimingData(timingData) {
 
 // Helper: subscribe to server method that streams lapboard data
 // server method name may differ; using "SendLiveLapboardData" client callback
-export async function startLapFeed(connection, onLapArray) {
+export async function startLapFeed(connection, onLapArray, onConnectionStatus) {
   if (!connection) throw new Error("Connection not provided");
+
+  currentConnection = connection;
+  connectionStarted = false;
+  if (onConnectionStatus) onConnectionStatus(false);
 
   // Register client handler that server invokes with an array of timingData
   connection.on("SendLiveLapboardData", (timingDataArray) => {
@@ -81,7 +106,19 @@ export async function startLapFeed(connection, onLapArray) {
       const laps = Array.isArray(timingDataArray)
         ? timingDataArray.map(normalizeTimingData)
         : [];
-      onLapArray?.(laps);
+
+      // Organize lap data by GroupID (color)
+      const lapsByColour = {};
+      laps.forEach((lap) => {
+        if (lap?.EventType === "Lap") {
+          const colour = lap.GroupId || lap.GroupID;
+          if (colour) {
+            lapsByColour[colour] = lap;
+          }
+        }
+      });
+
+      onLapArray?.(lapsByColour);
     } catch (e) {
       console.error("Lap handler error", e);
     }
@@ -93,6 +130,9 @@ export async function startLapFeed(connection, onLapArray) {
   });
 
   await connection.start();
+  connectionStarted = true;
+  if (onConnectionStatus) onConnectionStatus(true);
+  console.log("[SignalR] Connection started and subscribed");
 
   // Attempt to subscribe to server feed if available
   try {
@@ -106,6 +146,8 @@ export async function startLapFeed(connection, onLapArray) {
 
   return () => {
     try {
+      connectionStarted = false;
+      if (onConnectionStatus) onConnectionStatus(false);
       connection.off("SendLiveLapboardData");
       connection.stop();
     } catch {}
@@ -127,9 +169,11 @@ function normalizeLegacyUrl(url) {
   return normalized;
 }
 
-async function startLegacyLapFeed(hubUrl, onLapArray) {
+async function startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus) {
   const $ = await ensureLegacyClient();
   console.log("[SignalR] startLegacyLapFeed started", { hubUrl });
+  connectionStarted = false;
+  if (onConnectionStatus) onConnectionStatus(false);
 
   // If running in a secure context (https), route via same-origin proxy to avoid HTTPS upgrade/mixed content issues in browsers like Chrome
   const shouldProxy =
@@ -155,7 +199,20 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
       const laps = Array.isArray(timingDataArray)
         ? timingDataArray.map(normalizeTimingData)
         : [];
-      onLapArray?.(laps);
+
+      // Organize lap data by GroupID (color)
+      const lapsByColour = {};
+      laps.forEach((lap) => {
+        if (lap?.EventType === "Lap") {
+          const colour = lap.GroupId || lap.GroupID;
+          if (colour) {
+            lapsByColour[colour] = lap;
+          }
+          console.log(`Lap colour: ${colour} setting ${lapsByColour}`);
+        }
+      });
+
+      onLapArray?.(lapsByColour);
     } catch (e) {
       console.error("Lap handler error (legacy)", e);
     }
@@ -180,6 +237,9 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
       : {};
     console.log("[SignalR] Starting connection", { startOptions });
     await connection.start(startOptions);
+    connectionStarted = true;
+    currentConnection = connection;
+    if (onConnectionStatus) onConnectionStatus(true);
     console.log("[SignalR] Connection started successfully");
     try {
       console.log("[SignalR] Invoking SubscribeLiveLapboardDataForLapboard");
@@ -194,22 +254,27 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
     if (/^https:/i.test(baseUrl)) {
       const httpUrl = baseUrl.replace(/^https:/i, "http:");
       console.warn(
-        "[SignalR] Retrying legacy SignalR over http due to SSL error"
+        "[SignalR] Retrying legacy SignalR over http due to SSL error",
       );
       const retryConn = $.hubConnection(httpUrl, { useDefaultPath: false });
       const retryProxy = retryConn.createHubProxy("LiveLTTimingDataHub");
       retryProxy.on("SendLiveLapboardData", onLap);
       await retryConn.start();
+      connectionStarted = true;
+      currentConnection = retryConn;
+      if (onConnectionStatus) onConnectionStatus(true);
       try {
         await retryProxy.invoke("SubscribeLiveLapboardDataForLapboard");
       } catch (e) {
         console.warn(
           "[SignalR] Legacy subscribe failed or not required (retry)",
-          e?.message
+          e?.message,
         );
       }
       return () => {
         try {
+          connectionStarted = false;
+          if (onConnectionStatus) onConnectionStatus(false);
           retryProxy.off("SendLiveLapboardData");
           retryConn.stop();
         } catch {}
@@ -221,6 +286,8 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
 
   return () => {
     try {
+      connectionStarted = false;
+      if (onConnectionStatus) onConnectionStatus(false);
       proxy.off("SendLiveLapboardData");
       connection.stop();
     } catch {}
@@ -228,21 +295,25 @@ async function startLegacyLapFeed(hubUrl, onLapArray) {
 }
 
 // Auto-detect server type and connect
-export async function startLapFeedAuto(onLapArray, hubUrl = DEFAULT_HUB_URL) {
+export async function startLapFeedAuto(
+  onLapArray,
+  hubUrl = DEFAULT_HUB_URL,
+  onConnectionStatus,
+) {
   // If the path looks like legacy (/signalr), prefer legacy immediately to avoid noisy errors
   if (hubUrl.toLowerCase().includes("/signalr")) {
-    return await startLegacyLapFeed(hubUrl, onLapArray);
+    return await startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus);
   }
 
   // Prefer modern client; if ASP.NET detected, fall back to legacy client
   try {
     const connection = createConnection(hubUrl);
-    return await startLapFeed(connection, onLapArray);
+    return await startLapFeed(connection, onLapArray, onConnectionStatus);
   } catch (e) {
     const message = e?.message || "";
     if (message.includes(ASPNET_SERVER_ERROR_TEXT)) {
       console.warn("ASP.NET SignalR detected, switching to legacy client");
-      return await startLegacyLapFeed(hubUrl, onLapArray);
+      return await startLegacyLapFeed(hubUrl, onLapArray, onConnectionStatus);
     }
     throw e;
   }

@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify-icon/react";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
-import { startLapFeedAuto, parseLapDigits } from "./connection";
+import {
+  startLapFeedAuto,
+  parseLapDigits,
+  isConnectionActive,
+} from "./connection";
 
 // TODO: add color settings for numbers
 // TODO: add dark mode effect / intentionally set foreground & background now that explicit font colour set
@@ -28,6 +32,8 @@ export default function Lapboard({
   const [selectedColour, setSelectedColour] = useState(null); // one of White, Red, Yellow, Blue
   const [liveActive, setLiveActive] = useState(false);
   const [lastLapByColour, setLastLapByColour] = useState({}); // { White: {LapTime, ...}, ... }
+  const [isConnected, setIsConnected] = useState(false); // SignalR connection status
+  const [connectionAttempts, setConnectionAttempts] = useState(0); // Track connection attempts
   const handle = useFullScreenHandle();
 
   const incrementSeconds = () => {
@@ -51,51 +57,91 @@ export default function Lapboard({
   // Establish SignalR feed
   useEffect(() => {
     let dispose = null;
-    startLapFeedAuto((laps) => {
-      // Filter Lap events
-      const lapEvents = laps.filter((e) => e?.EventType === "Lap");
-      const active = {};
-      const lastLap = {};
-      lapEvents.forEach((e) => {
-        const colour = e.GroupId || e.GroupID;
-        if (!colour) return;
-        active[colour] = true;
-        lastLap[colour] = e;
-      });
-      setActiveColours(active);
-      setLastLapByColour((prev) => ({ ...prev, ...lastLap }));
-      setLiveActive(lapEvents.length > 0);
+    startLapFeedAuto(
+      (lapsByColour) => {
+        // lapsByColour is already organized: { White: {...}, Red: {...}, etc. }
+        const active = {};
+        Object.entries(lapsByColour).forEach(([colour, lap]) => {
+          if (lap && lap.EventType === "Lap") {
+            active[colour] = true;
+          }
+        });
 
-      // If no selection yet, pick the first active colour
-      if (!selectedColour) {
-        const first = Object.keys(active)[0];
-        if (first) setSelectedColour(first);
-      }
+        setActiveColours(active);
+        setLastLapByColour(lapsByColour);
+        setLiveActive(Object.keys(lapsByColour).length > 0);
 
-      // Update displayed digits from selected colour
-      const selectedLap = selectedColour ? lastLap[selectedColour] : null;
-      if (selectedLap?.LapTime != null) {
-        const { secondsDigit, tenthsDigit } = parseLapDigits(
-          selectedLap.LapTime
-        );
-        if (Number.isFinite(secondsDigit)) setSeconds(secondsDigit);
-        if (Number.isFinite(tenthsDigit)) setTenths(tenthsDigit);
-      }
-    }, undefined)
+        // If no selection yet, pick the first active colour
+        if (!selectedColour) {
+          const first = Object.keys(active)[0];
+          if (first) setSelectedColour(first);
+        }
+
+        // Update displayed digits from selected colour
+        const selectedLap = selectedColour
+          ? lapsByColour[selectedColour]
+          : null;
+        if (selectedLap?.LapTime != null) {
+          const { secondsDigit, tenthsDigit } = parseLapDigits(
+            selectedLap.LapTime,
+          );
+          if (Number.isFinite(secondsDigit)) setSeconds(secondsDigit);
+          if (Number.isFinite(tenthsDigit)) setTenths(tenthsDigit);
+        }
+      },
+      undefined,
+      (status) => {
+        setIsConnected(status);
+        if (status) {
+          setConnectionAttempts(0);
+          console.log("[Lapboard] SignalR connection established");
+        } else {
+          console.log("[Lapboard] SignalR connection lost");
+        }
+      },
+    )
       .then((cleanup) => {
         dispose = cleanup;
       })
       .catch((e) => {
         console.warn(
           "Live feed unavailable; staying in manual mode",
-          e?.message
+          e?.message,
         );
+        setIsConnected(false);
       });
 
     return () => {
       if (dispose) dispose();
     };
   }, [selectedColour]);
+
+  // Poll connection status: 5s initial, then 30s after first check
+  useEffect(() => {
+    let pollInterval = null;
+    let isFirstPoll = true;
+
+    const pollConnection = () => {
+      const status = isConnectionActive();
+      setIsConnected(status);
+
+      // After first poll, switch to 30-second interval
+      if (isFirstPoll) {
+        isFirstPoll = false;
+        clearInterval(pollInterval);
+        pollInterval = setInterval(pollConnection, 30000); // 30 seconds
+      }
+    };
+
+    // Start with 5-second poll
+    pollInterval = setInterval(pollConnection, 5000);
+    // Check immediately on mount
+    pollConnection();
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, []);
 
   return (
     <>
@@ -134,7 +180,7 @@ export default function Lapboard({
                 selectedColour === "White" ? "ring-2 ring-gray-500" : ""
               }`}
               aria-label="Select White">
-              {liveFeedActive ?? liveActive ? (
+              {(liveFeedActive ?? liveActive) ? (
                 activeColours["White"] ? (
                   <Icon icon="openmoji:white-circle" height="40" />
                 ) : (
@@ -159,7 +205,7 @@ export default function Lapboard({
                 selectedColour === "Red" ? "ring-2 ring-red-400" : ""
               }`}
               aria-label="Select Red">
-              {liveFeedActive ?? liveActive ? (
+              {(liveFeedActive ?? liveActive) ? (
                 activeColours["Red"] ? (
                   <Icon
                     icon="clarity:circle-solid"
@@ -187,7 +233,7 @@ export default function Lapboard({
                 selectedColour === "Yellow" ? "ring-2 ring-yellow-300" : ""
               }`}
               aria-label="Select Yellow">
-              {liveFeedActive ?? liveActive ? (
+              {(liveFeedActive ?? liveActive) ? (
                 activeColours["Yellow"] ? (
                   <Icon
                     icon="clarity:circle-solid"
@@ -215,7 +261,7 @@ export default function Lapboard({
                 selectedColour === "Blue" ? "ring-2 ring-blue-400" : ""
               }`}
               aria-label="Select Blue">
-              {liveFeedActive ?? liveActive ? (
+              {(liveFeedActive ?? liveActive) ? (
                 activeColours["Blue"] ? (
                   <Icon
                     icon="clarity:circle-solid"
@@ -250,81 +296,122 @@ export default function Lapboard({
               <Icon icon="humbleicons:cog" height="36" />
             </button>
           </div>
-          <div className="flex-1 flex items-center justify-center gap-2 px-6">
-            <div className="flex-1 flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={incrementSeconds}
-                disabled={liveFeedActive}
-                className={`p-3 rounded-lg transition-colors ${
-                  liveFeedActive
-                    ? "opacity-30 cursor-not-allowed"
-                    : darkMode
-                    ? "hover:bg-gray-800 text-gray-300"
-                    : "hover:bg-gray-100 text-gray-600"
-                }`}>
-                <Icon icon="simple-line-icons:plus" height="36" />
-              </button>
-              <p
-                className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
-                style={{
-                  fontWeight: 900,
-                  color: secondsColour,
-                  WebkitTextStroke: `0.5px ${secondsColour}`,
-                }}>
-                {seconds}
-              </p>
-              <button
-                type="button"
-                onClick={decrementSeconds}
-                disabled={liveFeedActive}
-                className={`p-3 rounded-lg transition-colors ${
-                  liveFeedActive
-                    ? "opacity-30 cursor-not-allowed"
-                    : darkMode
-                    ? "hover:bg-gray-800 text-gray-300"
-                    : "hover:bg-gray-100 text-gray-600"
-                }`}>
-                <Icon icon="simple-line-icons:minus" height="36" />
-              </button>
-            </div>
-            <div className="flex-1 flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={incrementTenths}
-                disabled={liveFeedActive}
-                className={`p-3 rounded-lg transition-colors ${
-                  liveFeedActive
-                    ? "opacity-30 cursor-not-allowed"
-                    : darkMode
-                    ? "hover:bg-gray-800 text-gray-300"
-                    : "hover:bg-gray-100 text-gray-600"
-                }`}>
-                <Icon icon="simple-line-icons:plus" height="36" />
-              </button>
+          <div
+            className="absolute top-8 right-8 flex items-center gap-2 z-10 px-4 py-2 rounded-lg"
+            style={{
+              backgroundColor: darkMode
+                ? "rgba(31, 41, 55, 0.8)"
+                : "rgba(243, 244, 246, 0.8)",
+              backdropFilter: "blur(4px)",
+            }}>
+            <div
+              className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></div>
+            <span
+              className={`text-sm font-medium ${
+                isConnected
+                  ? darkMode
+                    ? "text-green-400"
+                    : "text-green-600"
+                  : darkMode
+                    ? "text-red-400"
+                    : "text-red-600"
+              }`}>
+              {isConnected ? "Connected" : "Disconnected"}
+            </span>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6">
+            {selectedColour && lastLapByColour[selectedColour] && (
+              <div className="text-center">
+                <p
+                  className="text-xs pointer-events-none"
+                  style={{
+                    fontSize: "10px",
+                    opacity: 0.7,
+                    color: darkMode ? "#d1d5db" : "#374151",
+                    fontWeight: "500",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}>
+                  {lastLapByColour[selectedColour].Name}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex-1 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={incrementSeconds}
+                  disabled={liveFeedActive}
+                  className={`p-3 rounded-lg transition-colors ${
+                    liveFeedActive
+                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                      : darkMode
+                        ? "hover:bg-gray-800 text-gray-300"
+                        : "hover:bg-gray-100 text-gray-600"
+                  }`}>
+                  <Icon icon="simple-line-icons:plus" height="36" />
+                </button>
+                <p
+                  className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
+                  style={{
+                    fontWeight: 900,
+                    color: secondsColour,
+                    WebkitTextStroke: `0.5px ${secondsColour}`,
+                  }}>
+                  {seconds}
+                </p>
+                <button
+                  type="button"
+                  onClick={decrementSeconds}
+                  disabled={liveFeedActive}
+                  className={`p-3 rounded-lg transition-colors ${
+                    liveFeedActive
+                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                      : darkMode
+                        ? "hover:bg-gray-800 text-gray-300"
+                        : "hover:bg-gray-100 text-gray-600"
+                  }`}>
+                  <Icon icon="simple-line-icons:minus" height="36" />
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={incrementTenths}
+                  disabled={liveFeedActive}
+                  className={`p-3 rounded-lg transition-colors ${
+                    liveFeedActive
+                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                      : darkMode
+                        ? "hover:bg-gray-800 text-gray-300"
+                        : "hover:bg-gray-100 text-gray-600"
+                  }`}>
+                  <Icon icon="simple-line-icons:plus" height="36" />
+                </button>
 
-              <p
-                className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
-                style={{
-                  fontWeight: 900,
-                  color: tenthsColour,
-                  WebkitTextStroke: `0.5px ${tenthsColour}`,
-                }}>
-                {tenths}
-              </p>
-              <button
-                type="button"
-                onClick={decrementTenths}
-                disabled={liveFeedActive}
-                className={`p-3 rounded-lg transition-colors ${
-                  liveFeedActive
-                    ? "opacity-30 cursor-not-allowed"
-                    : darkMode
-                    ? "hover:bg-gray-800 text-gray-300"
-                    : "hover:bg-gray-100 text-gray-600"
-                }`}>
-                <Icon icon="simple-line-icons:minus" height="36" />
-              </button>
+                <p
+                  className="text-[40rem] leading-none tracking-tighter pointer-events-none -mt-20 -mb-10"
+                  style={{
+                    fontWeight: 900,
+                    color: tenthsColour,
+                    WebkitTextStroke: `0.5px ${tenthsColour}`,
+                  }}>
+                  {tenths}
+                </p>
+                <button
+                  type="button"
+                  onClick={decrementTenths}
+                  disabled={liveFeedActive}
+                  className={`p-3 rounded-lg transition-colors ${
+                    liveFeedActive
+                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                      : darkMode
+                        ? "hover:bg-gray-800 text-gray-300"
+                        : "hover:bg-gray-100 text-gray-600"
+                  }`}>
+                  <Icon icon="simple-line-icons:minus" height="36" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

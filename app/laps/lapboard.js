@@ -295,9 +295,7 @@ export default function Lapboard({
           <div
             className="absolute top-8 right-8 flex items-center gap-2 z-10 px-4 py-2 rounded-lg"
             style={{
-              backgroundColor: darkMode
-                ? "rgba(31, 41, 55, 0.8)"
-                : "rgba(243, 244, 246, 0.8)",
+              backgroundColor: "transparent",
               backdropFilter: "blur(4px)",
             }}>
             <div
@@ -346,10 +344,10 @@ export default function Lapboard({
                 <button
                   type="button"
                   onClick={incrementSeconds}
-                  disabled={liveFeedActive}
+                  disabled={selectedLap}
                   className={`p-3 rounded-lg transition-colors ${
-                    liveFeedActive
-                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                    selectedLap
+                      ? "cursor-not-allowed text-gray-300 dark:text-gray-500"
                       : darkMode
                         ? "hover:bg-gray-800 text-gray-300"
                         : "hover:bg-gray-100 text-gray-600"
@@ -368,10 +366,10 @@ export default function Lapboard({
                 <button
                   type="button"
                   onClick={decrementSeconds}
-                  disabled={liveFeedActive}
+                  disabled={selectedLap}
                   className={`p-3 rounded-lg transition-colors ${
-                    liveFeedActive
-                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                    selectedLap
+                      ? "cursor-not-allowed text-gray-300 dark:text-gray-500"
                       : darkMode
                         ? "hover:bg-gray-800 text-gray-300"
                         : "hover:bg-gray-100 text-gray-600"
@@ -383,10 +381,10 @@ export default function Lapboard({
                 <button
                   type="button"
                   onClick={incrementTenths}
-                  disabled={liveFeedActive}
+                  disabled={selectedLap}
                   className={`p-3 rounded-lg transition-colors ${
-                    liveFeedActive
-                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                    selectedLap
+                      ? "cursor-not-allowed text-gray-300 dark:text-gray-500"
                       : darkMode
                         ? "hover:bg-gray-800 text-gray-300"
                         : "hover:bg-gray-100 text-gray-600"
@@ -406,10 +404,10 @@ export default function Lapboard({
                 <button
                   type="button"
                   onClick={decrementTenths}
-                  disabled={liveFeedActive}
+                  disabled={selectedLap}
                   className={`p-3 rounded-lg transition-colors ${
-                    liveFeedActive
-                      ? "cursor-not-allowed text-gray-400 bg-gray-200 dark:bg-gray-700 dark:text-gray-500"
+                    selectedLap
+                      ? "cursor-not-allowed text-gray-300 dark:text-gray-500"
                       : darkMode
                         ? "hover:bg-gray-800 text-gray-300"
                         : "hover:bg-gray-100 text-gray-600"

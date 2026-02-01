@@ -231,13 +231,23 @@ async function startLegacyLapFeed(
   let currentActiveColours = {};
 
   // If running in a secure context (https), route via same-origin proxy to avoid HTTPS upgrade/mixed content issues in browsers like Chrome
+  // Can be overridden by NEXT_PUBLIC_DIRECT_SIGNALR for direct connections (when server is browser-accessible)
   const shouldProxy =
     typeof window !== "undefined" &&
     window.isSecureContext &&
-    /^http:/i.test(hubUrl || DEFAULT_HUB_URL);
+    /^http:/i.test(hubUrl || DEFAULT_HUB_URL) &&
+    process.env.NEXT_PUBLIC_DIRECT_SIGNALR !== "true";
   const baseUrl = shouldProxy
     ? "/api/signalr-proxy"
     : normalizeLegacyUrl(hubUrl);
+
+  console.log("[SignalR] Legacy connection config", {
+    shouldProxy,
+    baseUrl,
+    isSecureContext: window?.isSecureContext,
+    directMode: process.env.NEXT_PUBLIC_DIRECT_SIGNALR === "true",
+  });
+
   const connection = $.hubConnection(baseUrl, { useDefaultPath: false });
   const proxy = connection.createHubProxy("LiveLTTimingDataHub");
 

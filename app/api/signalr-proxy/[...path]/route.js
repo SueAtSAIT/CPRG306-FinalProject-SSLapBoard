@@ -68,20 +68,42 @@ async function proxy(request, ctx) {
 
   let resp;
   try {
-    resp = await fetch(targetUrl, init);
+    // Add timeout for Vercel deployment (9 seconds to stay under 10s limit)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+    resp = await fetch(targetUrl, {
+      ...init,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown fetch error";
+    const isTimeout = error.name === "AbortError";
+
     console.error("[SignalR Proxy] fetch failed", {
       targetUrl,
       message,
+      isTimeout,
+      host: hostForUpstream,
     });
+
     return new Response(
-      JSON.stringify({ error: "fetch_failed", targetUrl, message }),
+      JSON.stringify({
+        error: isTimeout ? "timeout" : "fetch_failed",
+        targetUrl,
+        message,
+        hint: "Check that the SignalR server is accessible from Vercel's network",
+      }),
       {
         status: 502,
-        headers: { "content-type": "application/json" },
-      }
+        headers: {
+          "content-type": "application/json",
+          "access-control-allow-origin": "*",
+        },
+      },
     );
   }
   const respHeaders = new Headers(resp.headers);
@@ -118,13 +140,13 @@ async function proxy(request, ctx) {
           const remoteBase = DEFAULT_TARGET.replace(/\/+$/g, "");
           body.Url = body.Url.replace(
             remoteBase,
-            `${url.origin}/api/signalr-proxy`
+            `${url.origin}/api/signalr-proxy`,
           );
         } else if (originalUrl.startsWith("/")) {
           // Relative URL: prepend proxy path
           body.Url = `/api/signalr-proxy${originalUrl.replace(
             /^\/signalr/,
-            ""
+            "",
           )}`;
         }
         console.log("[SignalR Proxy] Negotiate URL rewrite", {
